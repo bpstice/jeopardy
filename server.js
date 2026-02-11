@@ -92,6 +92,10 @@ io.on('connection', (socket) => {
   socket.on('admin:join', () => {
     adminSocket = socket;
     socket.emit('game:state', gameState);
+    // Also send current buzz order so admin doesn't lose it on reconnect
+    if (gameState.buzzOrder.length > 0) {
+      socket.emit('buzz:order', gameState.buzzOrder);
+    }
     console.log('Admin connected');
   });
 
@@ -150,8 +154,8 @@ io.on('connection', (socket) => {
     if (!gameState.buzzersOpen) return;
     const player = gameState.players[socket.id];
     if (!player) return;
-    // Prevent double buzz
-    if (gameState.buzzOrder.find(b => b.id === socket.id)) return;
+    // Prevent double buzz by socket ID or by name (covers reconnection edge case)
+    if (gameState.buzzOrder.find(b => b.id === socket.id || b.name === player.name)) return;
 
     const buzzTime = Date.now();
     gameState.buzzOrder.push({ id: socket.id, name: player.name, time: buzzTime });
@@ -160,6 +164,8 @@ io.on('connection', (socket) => {
     const position = gameState.buzzOrder.length;
     socket.emit('buzz:confirmed', position);
 
+    // Broadcast buzz order to ALL connected clients so admin always gets it
+    io.emit('buzz:update', gameState.buzzOrder);
     if (adminSocket) adminSocket.emit('buzz:order', gameState.buzzOrder);
   });
 
