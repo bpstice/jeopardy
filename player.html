@@ -313,10 +313,46 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
+  reconnectionDelayMax: 3000,
+  timeout: 10000
+});
 let myName = '';
 let myId = '';
 let buzzed = false;
+
+// Auto-rejoin when reconnecting after sleep/tab switch
+socket.on('connect', () => {
+  if (myName) {
+    socket.emit('player:join', myName);
+  }
+});
+
+// Reconnect when phone wakes up or tab becomes visible
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && myName) {
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      // Already connected but might have missed events, re-register
+      socket.emit('player:join', myName);
+    }
+  }
+});
+
+// Also try on focus (catches some mobile browsers better)
+window.addEventListener('focus', () => {
+  if (myName) {
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      socket.emit('player:join', myName);
+    }
+  }
+});
 
 // Handle enter key on input
 document.getElementById('nameInput').addEventListener('keydown', (e) => {

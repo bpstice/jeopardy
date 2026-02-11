@@ -95,12 +95,28 @@ io.on('connection', (socket) => {
     console.log('Admin connected');
   });
 
-  // Player joins
+  // Player joins (or rejoins)
   socket.on('player:join', (name) => {
     const playerId = socket.id;
-    gameState.players[playerId] = { name, score: 0, id: playerId };
+    // Check if this player was already in the game (reconnecting)
+    const existing = Object.entries(gameState.players).find(([id, p]) => p.name === name);
+    if (existing) {
+      const [oldId, oldPlayer] = existing;
+      // Transfer score to new socket id
+      gameState.players[playerId] = { name, score: oldPlayer.score, id: playerId };
+      if (oldId !== playerId) delete gameState.players[oldId];
+      // Update any buzz order references
+      gameState.buzzOrder.forEach(b => { if (b.id === oldId) b.id = playerId; });
+    } else {
+      gameState.players[playerId] = { name, score: 0, id: playerId };
+    }
     io.emit('players:update', gameState.players);
     socket.emit('player:registered', { id: playerId, name });
+    // Send current game state so reconnecting player is in sync
+    if (gameState.currentQuestion) {
+      socket.emit('question:reveal', gameState.currentQuestion);
+      if (gameState.buzzersOpen) socket.emit('buzzers:open');
+    }
     console.log(`Player joined: ${name}`);
   });
 
@@ -214,9 +230,17 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // Don't delete players immediately - give them time to reconnect
+    // Mark them as disconnected, clean up after 5 minutes
     if (gameState.players[socket.id]) {
-      delete gameState.players[socket.id];
-      io.emit('players:update', gameState.players);
+      gameState.players[socket.id].disconnectedAt = Date.now();
+      // Clean up after 5 minutes if they haven't reconnected
+      setTimeout(() => {
+        if (gameState.players[socket.id] && gameState.players[socket.id].disconnectedAt) {
+          delete gameState.players[socket.id];
+          io.emit('players:update', gameState.players);
+        }
+      }, 5 * 60 * 1000);
     }
     if (adminSocket && adminSocket.id === socket.id) {
       adminSocket = null;

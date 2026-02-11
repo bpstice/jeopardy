@@ -486,10 +486,27 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
+  reconnectionDelayMax: 3000,
+  timeout: 10000
+});
 let gameData = null;
 
 socket.emit('admin:join');
+
+// Auto-rejoin as admin on reconnect
+socket.on('connect', () => {
+  socket.emit('admin:join');
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (!socket.connected) socket.connect();
+    else socket.emit('admin:join');
+  }
+});
 
 socket.on('game:state', (state) => {
   gameData = state;
