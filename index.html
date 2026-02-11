@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeopardy!</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee+Shade&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #1a1a6e 0%, #060a3a 60%, #020318 100%);
+    font-family: 'Oswald', sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+  .stage-lights {
+    position: fixed;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120%;
+    height: 200px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,200,50,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .container {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+  }
+  h1 {
+    font-family: 'Bungee Shade', cursive;
+    font-size: clamp(3rem, 8vw, 6rem);
+    color: #f5c518;
+    text-shadow: 0 0 40px rgba(245,197,24,0.4), 0 4px 0 #b8860b, 0 6px 20px rgba(0,0,0,0.5);
+    margin-bottom: 0.2em;
+    letter-spacing: 0.05em;
+    animation: titleGlow 3s ease-in-out infinite alternate;
+  }
+  @keyframes titleGlow {
+    from { text-shadow: 0 0 30px rgba(245,197,24,0.3), 0 4px 0 #b8860b, 0 6px 20px rgba(0,0,0,0.5); }
+    to { text-shadow: 0 0 60px rgba(245,197,24,0.6), 0 4px 0 #b8860b, 0 6px 20px rgba(0,0,0,0.5); }
+  }
+  .subtitle {
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+  .buttons {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 220px;
+    height: 180px;
+    background: linear-gradient(180deg, #1a2980 0%, #0d1554 100%);
+    border: 3px solid rgba(245,197,24,0.5);
+    border-radius: 12px;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(245,197,24,0.08) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  a:hover {
+    transform: translateY(-4px);
+    border-color: #f5c518;
+    box-shadow: 0 8px 40px rgba(245,197,24,0.3), 0 0 0 1px rgba(245,197,24,0.2);
+  }
+  a:hover::before { opacity: 1; }
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+  .btn-label {
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #f5c518;
+  }
+  .btn-desc {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 0.3rem;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+<div class="stage-lights"></div>
+<div class="container">
+  <h1>JEOPARDY!</h1>
+  <p class="subtitle">Custom Game Night</p>
+  <div class="buttons">
+    <a href="/admin.html">
+      <div class="icon">🖥️</div>
+      <div class="btn-label">Game Master</div>
+      <div class="btn-desc">Control the board</div>
+    </a>
+    <a href="/player.html">
+      <div class="icon">📱</div>
+      <div class="btn-label">Player</div>
+      <div class="btn-desc">Join & buzz in</div>
+    </a>
+    <a href="/setup.html">
+      <div class="icon">⚙️</div>
+      <div class="btn-label">Setup</div>
+      <div class="btn-desc">Edit categories</div>
+    </a>
+  </div>
+</div>
+</body>
+</html>

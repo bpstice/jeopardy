@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Jeopardy! - Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Bungee+Shade&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --board-blue: #0a1172;
+    --gold: #f5c518;
+    --bg-dark: #020318;
+  }
+  body {
+    min-height: 100dvh;
+    background: var(--bg-dark);
+    font-family: 'Oswald', sans-serif;
+    color: #fff;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ---- JOIN SCREEN ---- */
+  .join-screen {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at center, #1a1a6e 0%, var(--bg-dark) 100%);
+  }
+  .join-screen h1 {
+    font-family: 'Bungee Shade', cursive;
+    font-size: 2.5rem;
+    color: var(--gold);
+    margin-bottom: 0.3em;
+    text-shadow: 0 0 30px rgba(245,197,24,0.3);
+  }
+  .join-screen p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+  .join-input {
+    width: 100%;
+    max-width: 300px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    padding: 14px 18px;
+    border: 2px solid rgba(245,197,24,0.4);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  .join-input:focus { border-color: var(--gold); }
+  .join-input::placeholder { color: rgba(255,255,255,0.25); }
+  .join-btn {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 16px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--gold);
+    color: #000;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+  }
+  .join-btn:hover { background: #ffd633; }
+  .join-btn:active { transform: scale(0.97); }
+
+  /* ---- GAME SCREEN ---- */
+  .game-screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  .game-screen.active { display: flex; }
+
+  /* Header */
+  .player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 2px solid var(--gold);
+  }
+  .player-name-display {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .player-score-display {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .player-score-display.negative { color: #e74c3c; }
+
+  /* Status area */
+  .status-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+  }
+
+  /* Waiting state */
+  .waiting-message {
+    font-size: 1.3rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .waiting-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+  }
+
+  /* Question display */
+  .mobile-question {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .mobile-question.active { display: flex; }
+  .mq-category {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.4);
+  }
+  .mq-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .mq-text {
+    font-size: 1.1rem;
+    line-height: 1.4;
+    text-align: center;
+    margin-top: 8px;
+    padding: 0 12px;
+    color: rgba(255,255,255,0.85);
+  }
+  .mq-answer {
+    font-size: 1rem;
+    color: var(--gold);
+    margin-top: 12px;
+    display: none;
+    text-align: center;
+    padding: 12px;
+    background: rgba(245,197,24,0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(245,197,24,0.2);
+  }
+  .mq-answer.visible { display: block; }
+
+  /* Buzzer */
+  .buzzer-area {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .buzzer-btn {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 6px solid #333;
+    background: radial-gradient(circle at 35% 35%, #666, #222);
+    color: #555;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: default;
+    transition: all 0.15s;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 -4px 10px rgba(0,0,0,0.3);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .buzzer-btn.ready {
+    border-color: #c0392b;
+    background: radial-gradient(circle at 35% 35%, #e74c3c, #8e1a0f);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 0 40px rgba(231,76,60,0.4), 0 8px 30px rgba(0,0,0,0.5), inset 0 -4px 10px rgba(0,0,0,0.3);
+    animation: buzzerGlow 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes buzzerGlow {
+    from { box-shadow: 0 0 30px rgba(231,76,60,0.3), 0 8px 30px rgba(0,0,0,0.5); }
+    to { box-shadow: 0 0 60px rgba(231,76,60,0.6), 0 8px 30px rgba(0,0,0,0.5); }
+  }
+
+  .buzzer-btn.ready:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 20px rgba(231,76,60,0.3), 0 4px 15px rgba(0,0,0,0.5);
+  }
+
+  .buzzer-btn.buzzed {
+    border-color: var(--gold);
+    background: radial-gradient(circle at 35% 35%, #f5c518, #8B6914);
+    color: #000;
+    cursor: default;
+    animation: none;
+    box-shadow: 0 0 40px rgba(245,197,24,0.4), 0 8px 30px rgba(0,0,0,0.5);
+  }
+
+  .buzz-position {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.5);
+    height: 24px;
+  }
+
+  /* Scoreboard mini */
+  .mini-scoreboard {
+    padding: 12px 18px;
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid #222;
+  }
+  .mini-scoreboard h4 {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 6px;
+  }
+  .mini-player {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 0.85rem;
+  }
+  .mini-player .name { color: rgba(255,255,255,0.7); }
+  .mini-player .score { color: var(--gold); font-weight: 600; }
+  .mini-player .score.neg { color: #e74c3c; }
+</style>
+</head>
+<body>
+
+<!-- JOIN SCREEN -->
+<div class="join-screen" id="joinScreen">
+  <h1>JEOPARDY!</h1>
+  <p>Enter your name to play</p>
+  <input type="text" class="join-input" id="nameInput" placeholder="Your Name" maxlength="20" autocomplete="off" autofocus>
+  <button class="join-btn" onclick="joinGame()">Join Game</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="game-screen" id="gameScreen">
+  <div class="player-header">
+    <div class="player-name-display" id="displayName"></div>
+    <div class="player-score-display" id="displayScore">$0</div>
+  </div>
+
+  <div class="status-area">
+    <!-- Waiting state -->
+    <div id="waitingState">
+      <div class="waiting-message">Waiting for question<span class="waiting-dots"></span></div>
+    </div>
+
+    <!-- Question state -->
+    <div class="mobile-question" id="questionState">
+      <div class="mq-category" id="mqCategory"></div>
+      <div class="mq-value" id="mqValue"></div>
+      <div class="mq-text" id="mqText"></div>
+      <div class="mq-answer" id="mqAnswer"></div>
+    </div>
+  </div>
+
+  <!-- Buzzer -->
+  <div class="buzzer-area">
+    <div class="buzz-position" id="buzzPosition"></div>
+    <button class="buzzer-btn" id="buzzerBtn" disabled>
+      WAIT
+    </button>
+  </div>
+
+  <!-- Mini scoreboard -->
+  <div class="mini-scoreboard">
+    <h4>Scores</h4>
+    <div id="miniScoreboard"></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let myName = '';
+let myId = '';
+let buzzed = false;
+
+// Handle enter key on input
+document.getElementById('nameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinGame();
+});
+
+function joinGame() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+  myName = name;
+  socket.emit('player:join', name);
+}
+
+socket.on('player:registered', ({ id, name }) => {
+  myId = id;
+  document.getElementById('displayName').textContent = name;
+  document.getElementById('joinScreen').style.display = 'none';
+  document.getElementById('gameScreen').classList.add('active');
+});
+
+// Question revealed
+socket.on('question:reveal', (q) => {
+  buzzed = false;
+  document.getElementById('waitingState').style.display = 'none';
+  document.getElementById('questionState').classList.add('active');
+  document.getElementById('mqCategory').textContent = q.category;
+  document.getElementById('mqValue').textContent = '$' + q.value;
+  document.getElementById('mqText').textContent = q.question;
+  document.getElementById('mqAnswer').textContent = '';
+  document.getElementById('mqAnswer').classList.remove('visible');
+
+  const btn = document.getElementById('buzzerBtn');
+  btn.className = 'buzzer-btn';
+  btn.textContent = 'WAIT';
+  btn.disabled = true;
+  document.getElementById('buzzPosition').textContent = '';
+});
+
+// Buzzers opened
+socket.on('buzzers:open', () => {
+  if (buzzed) return;
+  const btn = document.getElementById('buzzerBtn');
+  btn.className = 'buzzer-btn ready';
+  btn.textContent = 'BUZZ!';
+  btn.disabled = false;
+  btn.onclick = doBuzz;
+
+  // Vibrate if available
+  if (navigator.vibrate) navigator.vibrate(100);
+});
+
+function doBuzz() {
+  if (buzzed) return;
+  buzzed = true;
+  socket.emit('player:buzz');
+  const btn = document.getElementById('buzzerBtn');
+  btn.className = 'buzzer-btn buzzed';
+  btn.textContent = 'BUZZED!';
+  btn.disabled = true;
+  btn.onclick = null;
+  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+}
+
+socket.on('buzz:confirmed', (position) => {
+  const ordinal = position === 1 ? '1st' : position === 2 ? '2nd' : position === 3 ? '3rd' : position + 'th';
+  document.getElementById('buzzPosition').textContent = `You buzzed in ${ordinal}!`;
+});
+
+// Answer revealed
+socket.on('answer:reveal', (answer) => {
+  document.getElementById('mqAnswer').textContent = answer;
+  document.getElementById('mqAnswer').classList.add('visible');
+});
+
+// Question closed
+socket.on('question:close', () => {
+  buzzed = false;
+  document.getElementById('waitingState').style.display = '';
+  document.getElementById('questionState').classList.remove('active');
+  const btn = document.getElementById('buzzerBtn');
+  btn.className = 'buzzer-btn';
+  btn.textContent = 'WAIT';
+  btn.disabled = true;
+  btn.onclick = null;
+  document.getElementById('buzzPosition').textContent = '';
+});
+
+// Score updates
+socket.on('players:update', (players) => {
+  // Update my score
+  if (players[myId]) {
+    const score = players[myId].score;
+    const el = document.getElementById('displayScore');
+    el.textContent = (score < 0 ? '-' : '') + '$' + Math.abs(score);
+    el.className = 'player-score-display' + (score < 0 ? ' negative' : '');
+  }
+
+  // Mini scoreboard
+  const entries = Object.values(players).sort((a, b) => b.score - a.score);
+  document.getElementById('miniScoreboard').innerHTML = entries.map(p => `
+    <div class="mini-player">
+      <span class="name">${escapeHtml(p.name)}${p.id === myId ? ' (you)' : ''}</span>
+      <span class="score ${p.score < 0 ? 'neg' : ''}">${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}</span>
+    </div>
+  `).join('');
+});
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
