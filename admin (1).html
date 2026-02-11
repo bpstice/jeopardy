@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeopardy! - Game Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Bungee+Shade&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --board-blue: #0a1172;
+    --cell-blue: #1a2fa0;
+    --cell-blue-hover: #2540c8;
+    --gold: #f5c518;
+    --gold-dark: #c9a200;
+    --bg-dark: #020318;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg-dark);
+    font-family: 'Oswald', sans-serif;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  /* ---- TOP BAR ---- */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+    border-bottom: 3px solid var(--gold);
+    position: relative;
+    z-index: 100;
+  }
+  .top-bar h1 {
+    font-family: 'Bungee Shade', cursive;
+    font-size: 1.5rem;
+    color: var(--gold);
+  }
+  .top-bar-controls {
+    display: flex;
+    gap: 8px;
+  }
+  .top-bar-controls button {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .top-bar-controls button:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: var(--gold);
+  }
+  .top-bar-controls button.danger { border-color: #c0392b; color: #e74c3c; }
+  .top-bar-controls button.danger:hover { background: rgba(231,76,60,0.2); }
+
+  /* ---- LAYOUT ---- */
+  .main-layout {
+    display: flex;
+    height: calc(100vh - 52px);
+  }
+
+  /* ---- BOARD ---- */
+  .board-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: radial-gradient(ellipse at center, #0d1066 0%, var(--bg-dark) 100%);
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: auto repeat(5, 1fr);
+    gap: 4px;
+    width: 100%;
+    max-width: 1100px;
+    aspect-ratio: 1.6;
+    background: #000;
+    border: 4px solid #333;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 0 60px rgba(10,17,114,0.5), inset 0 0 30px rgba(0,0,0,0.3);
+  }
+
+  .cat-header {
+    background: var(--board-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 4px;
+    font-size: clamp(0.6rem, 1.2vw, 1rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+    text-shadow: 1px 2px 4px rgba(0,0,0,0.6);
+    border: 2px solid rgba(255,255,255,0.05);
+  }
+
+  .q-cell {
+    background: var(--cell-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 2px solid rgba(255,255,255,0.05);
+    position: relative;
+  }
+  .q-cell:hover {
+    background: var(--cell-blue-hover);
+    border-color: rgba(245,197,24,0.3);
+    z-index: 2;
+    transform: scale(1.02);
+  }
+  .q-cell .value {
+    font-size: clamp(1rem, 2.5vw, 2.2rem);
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 2px 3px 0 #8B6914, 0 0 20px rgba(245,197,24,0.3);
+  }
+  .q-cell.used {
+    background: rgba(10,17,114,0.3);
+    cursor: default;
+    border-color: transparent;
+  }
+  .q-cell.used:hover {
+    transform: none;
+    background: rgba(10,17,114,0.3);
+  }
+  .q-cell.used .value {
+    opacity: 0;
+  }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar {
+    width: 300px;
+    background: #0a0a0a;
+    border-left: 2px solid #222;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid #222;
+  }
+  .sidebar-section h3 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 8px;
+  }
+
+  /* Scoreboard */
+  .scoreboard {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    background: rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+  .player-row:hover { background: rgba(255,255,255,0.08); }
+  .player-name { font-size: 0.95rem; font-weight: 500; }
+  .player-score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .player-score.negative { color: #e74c3c; }
+  .score-adjust {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+  }
+  .score-adjust button {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #444;
+    border-radius: 3px;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+  }
+  .score-adjust button:hover { border-color: var(--gold); color: var(--gold); }
+  .no-players {
+    color: rgba(255,255,255,0.3);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  /* Buzz order */
+  .buzz-section { max-height: 200px; overflow-y: auto; }
+  .buzz-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 3px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+  .buzz-entry:nth-child(1) { background: rgba(245,197,24,0.15); }
+  .buzz-entry:nth-child(2) { background: rgba(192,192,192,0.1); }
+  .buzz-entry:nth-child(3) { background: rgba(205,127,50,0.1); }
+  .buzz-rank {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+  .buzz-entry:nth-child(2) .buzz-rank { background: #c0c0c0; }
+  .buzz-entry:nth-child(3) .buzz-rank { background: #cd7f32; }
+  .buzz-entry:nth-child(n+4) .buzz-rank { background: #555; }
+  .buzz-name { flex: 1; }
+  .buzz-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .buzz-actions button {
+    padding: 3px 10px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .btn-correct { background: #27ae60; color: #fff; }
+  .btn-correct:hover { background: #2ecc71; }
+  .btn-wrong { background: #c0392b; color: #fff; }
+  .btn-wrong:hover { background: #e74c3c; }
+
+  /* ---- QUESTION OVERLAY ---- */
+  .question-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: var(--board-blue);
+    display: none;
+    flex-direction: column;
+  }
+  .question-overlay.active {
+    display: flex;
+  }
+  .question-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 3px solid var(--gold);
+  }
+  .question-category {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.6);
+  }
+  .question-value-badge {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .question-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  .question-text {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    text-align: center;
+    text-transform: uppercase;
+    line-height: 1.3;
+    text-shadow: 2px 4px 8px rgba(0,0,0,0.5);
+    max-width: 900px;
+    font-weight: 500;
+  }
+  .answer-text {
+    font-size: 1.5rem;
+    color: var(--gold);
+    text-align: center;
+    margin-top: 20px;
+    display: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .answer-text.visible { display: block; }
+  .question-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    flex-wrap: wrap;
+  }
+  .question-controls button {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    padding: 10px 24px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .question-controls button:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: var(--gold);
+  }
+  .question-controls button.primary {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+  .question-controls button.primary:hover { background: #ffd633; }
+  .question-controls button.primary:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .question-controls button.highlight {
+    animation: highlightPulse 1s ease-in-out infinite;
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  @keyframes highlightPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(245,197,24,0.3); background: rgba(245,197,24,0.15); }
+    50% { box-shadow: 0 0 25px rgba(245,197,24,0.6); background: rgba(245,197,24,0.3); }
+  }
+
+  /* Buzz panel in overlay */
+  .overlay-buzz-panel {
+    position: absolute;
+    right: 20px;
+    top: 80px;
+    width: 280px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 14px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+  .overlay-buzz-panel h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 8px;
+  }
+  .buzzer-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+  }
+  .buzzer-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c0392b;
+  }
+  .buzzer-dot.open { background: #27ae60; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Player count badge */
+  .player-count {
+    background: var(--gold);
+    color: #000;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .sidebar { width: 250px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <h1>JEOPARDY!</h1>
+  <div class="top-bar-controls">
+    <button onclick="location.href='/setup.html'">Edit Board</button>
+    <button class="danger" onclick="resetGame()">Reset Game</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+  <!-- BOARD -->
+  <div class="board-area">
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>Players <span class="player-count" id="playerCount">0</span></h3>
+      <div id="scoreboard" class="scoreboard">
+        <div class="no-players">Waiting for players to join...</div>
+      </div>
+    </div>
+    <div class="sidebar-section buzz-section">
+      <h3>Buzz Order</h3>
+      <div id="buzzList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUESTION OVERLAY -->
+<div class="question-overlay" id="questionOverlay">
+  <div class="question-top-bar">
+    <div class="question-category" id="qCategory"></div>
+    <div class="question-value-badge" id="qValue"></div>
+  </div>
+  <div class="question-body">
+    <div>
+      <div class="question-text" id="qText"></div>
+      <div class="answer-text" id="qAnswer"></div>
+    </div>
+  </div>
+  <div class="overlay-buzz-panel">
+    <h3>Buzz Order</h3>
+    <div class="buzzer-status">
+      <div class="buzzer-dot" id="buzzerDot"></div>
+      <span id="buzzerStatusText">Buzzers Closed</span>
+    </div>
+    <div id="overlayBuzzList"></div>
+  </div>
+  <div class="question-controls">
+    <button class="primary" id="openBuzzersBtn" onclick="openBuzzers()">Open Buzzers</button>
+    <button id="showAnswerBtn" onclick="showAnswer()">Show Answer</button>
+    <button id="backToBoardBtn" onclick="closeQuestion()">Back to Board</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
+  reconnectionDelayMax: 3000,
+  timeout: 10000
+});
+let gameData = null;
+
+socket.emit('admin:join');
+
+// Auto-rejoin as admin on reconnect
+socket.on('connect', () => {
+  socket.emit('admin:join');
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (!socket.connected) socket.connect();
+    else socket.emit('admin:join');
+  }
+});
+
+socket.on('game:state', (state) => {
+  gameData = state;
+  renderBoard();
+  renderScoreboard(state.players);
+});
+
+socket.on('players:update', (players) => {
+  if (gameData) gameData.players = players;
+  renderScoreboard(players);
+});
+
+socket.on('buzz:order', (order) => {
+  renderBuzzOrder(order);
+});
+
+// Backup channel - catches buzzes even if adminSocket reference was stale
+socket.on('buzz:update', (order) => {
+  renderBuzzOrder(order);
+});
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  gameData.categories.forEach((cat, ci) => {
+    const header = document.createElement('div');
+    header.className = 'cat-header';
+    header.textContent = cat.name;
+    board.appendChild(header);
+  });
+  for (let qi = 0; qi < 5; qi++) {
+    gameData.categories.forEach((cat, ci) => {
+      const cell = document.createElement('div');
+      const q = cat.questions[qi];
+      cell.className = 'q-cell' + (q.used ? ' used' : '');
+      cell.innerHTML = `<span class="value">$${q.value}</span>`;
+      if (!q.used) {
+        cell.onclick = () => selectQuestion(ci, qi);
+      }
+      board.appendChild(cell);
+    });
+  }
+}
+
+let buzzerTimer = null;
+
+function selectQuestion(catIndex, qIndex) {
+  socket.emit('admin:selectQuestion', { catIndex, qIndex });
+  const cat = gameData.categories[catIndex];
+  const q = cat.questions[qIndex];
+
+  document.getElementById('qCategory').textContent = cat.name;
+  document.getElementById('qValue').textContent = '$' + q.value;
+  document.getElementById('qText').textContent = q.question;
+  document.getElementById('qAnswer').textContent = q.answer;
+  document.getElementById('qAnswer').classList.remove('visible');
+  document.getElementById('buzzerDot').classList.remove('open');
+  document.getElementById('buzzerStatusText').textContent = 'Buzzers opening in 2.5s...';
+  document.getElementById('openBuzzersBtn').disabled = true;
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.remove('highlight');
+  document.getElementById('overlayBuzzList').innerHTML = '';
+  document.getElementById('questionOverlay').classList.add('active');
+
+  // Auto-open buzzers after 2.5 seconds
+  if (buzzerTimer) clearTimeout(buzzerTimer);
+  buzzerTimer = setTimeout(() => {
+    openBuzzers();
+  }, 2500);
+}
+
+function openBuzzers() {
+  socket.emit('admin:openBuzzers');
+  document.getElementById('buzzerDot').classList.add('open');
+  document.getElementById('buzzerStatusText').textContent = 'Buzzers Open!';
+  document.getElementById('openBuzzersBtn').disabled = true;
+}
+
+function showAnswer() {
+  document.getElementById('qAnswer').classList.add('visible');
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.add('highlight');
+  socket.emit('admin:showAnswer');
+}
+
+function closeQuestion() {
+  if (buzzerTimer) clearTimeout(buzzerTimer);
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.remove('highlight');
+  socket.emit('admin:closeQuestion');
+  document.getElementById('questionOverlay').classList.remove('active');
+}
+
+function renderScoreboard(players) {
+  const sb = document.getElementById('scoreboard');
+  const count = document.getElementById('playerCount');
+  const entries = Object.values(players);
+  count.textContent = entries.length;
+
+  if (entries.length === 0) {
+    sb.innerHTML = '<div class="no-players">Waiting for players to join...</div>';
+    return;
+  }
+
+  entries.sort((a, b) => b.score - a.score);
+  sb.innerHTML = entries.map(p => `
+    <div class="player-row">
+      <span class="player-name">${escapeHtml(p.name)}</span>
+      <div style="display:flex;align-items:center;">
+        <span class="player-score ${p.score < 0 ? 'negative' : ''}">
+          ${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}
+        </span>
+        <div class="score-adjust">
+          <button onclick="adjustScore('${p.id}', 100)" title="+100">+</button>
+          <button onclick="adjustScore('${p.id}', -100)" title="-100">-</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderBuzzOrder(order) {
+  const html = order.map((b, i) => `
+    <div class="buzz-entry">
+      <div class="buzz-rank">${i + 1}</div>
+      <div class="buzz-name">${escapeHtml(b.name)}</div>
+      <div class="buzz-actions">
+        <button class="btn-correct" onclick="awardPoints('${b.id}', true)">✓</button>
+        <button class="btn-wrong" onclick="awardPoints('${b.id}', false)">✗</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('buzzList').innerHTML = html;
+  document.getElementById('overlayBuzzList').innerHTML = html;
+}
+
+function awardPoints(playerId, correct) {
+  socket.emit('admin:awardPoints', { playerId, correct });
+  // Highlight Show Answer as the next step
+  document.getElementById('showAnswerBtn').classList.add('highlight');
+}
+
+function adjustScore(playerId, amount) {
+  socket.emit('admin:adjustScore', { playerId, amount });
+}
+
+function resetGame() {
+  if (confirm('Reset all scores and restore all questions?')) {
+    socket.emit('admin:resetGame');
+  }
+}
+
+socket.on('question:close', () => {
+  document.getElementById('questionOverlay').classList.remove('active');
+  document.getElementById('buzzList').innerHTML = '';
+});
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
