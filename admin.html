@@ -362,6 +362,15 @@
     opacity: 0.4;
     cursor: default;
   }
+  .question-controls button.highlight {
+    animation: highlightPulse 1s ease-in-out infinite;
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  @keyframes highlightPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(245,197,24,0.3); background: rgba(245,197,24,0.15); }
+    50% { box-shadow: 0 0 25px rgba(245,197,24,0.6); background: rgba(245,197,24,0.3); }
+  }
 
   /* Buzz panel in overlay */
   .overlay-buzz-panel {
@@ -479,8 +488,8 @@
   </div>
   <div class="question-controls">
     <button class="primary" id="openBuzzersBtn" onclick="openBuzzers()">Open Buzzers</button>
-    <button onclick="showAnswer()">Show Answer</button>
-    <button onclick="closeQuestion()">Back to Board</button>
+    <button id="showAnswerBtn" onclick="showAnswer()">Show Answer</button>
+    <button id="backToBoardBtn" onclick="closeQuestion()">Back to Board</button>
   </div>
 </div>
 
@@ -551,6 +560,8 @@ function renderBoard() {
   }
 }
 
+let buzzerTimer = null;
+
 function selectQuestion(catIndex, qIndex) {
   socket.emit('admin:selectQuestion', { catIndex, qIndex });
   const cat = gameData.categories[catIndex];
@@ -562,10 +573,18 @@ function selectQuestion(catIndex, qIndex) {
   document.getElementById('qAnswer').textContent = q.answer;
   document.getElementById('qAnswer').classList.remove('visible');
   document.getElementById('buzzerDot').classList.remove('open');
-  document.getElementById('buzzerStatusText').textContent = 'Buzzers Closed';
-  document.getElementById('openBuzzersBtn').disabled = false;
+  document.getElementById('buzzerStatusText').textContent = 'Buzzers opening in 2.5s...';
+  document.getElementById('openBuzzersBtn').disabled = true;
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.remove('highlight');
   document.getElementById('overlayBuzzList').innerHTML = '';
   document.getElementById('questionOverlay').classList.add('active');
+
+  // Auto-open buzzers after 2.5 seconds
+  if (buzzerTimer) clearTimeout(buzzerTimer);
+  buzzerTimer = setTimeout(() => {
+    openBuzzers();
+  }, 2500);
 }
 
 function openBuzzers() {
@@ -577,10 +596,15 @@ function openBuzzers() {
 
 function showAnswer() {
   document.getElementById('qAnswer').classList.add('visible');
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.add('highlight');
   socket.emit('admin:showAnswer');
 }
 
 function closeQuestion() {
+  if (buzzerTimer) clearTimeout(buzzerTimer);
+  document.getElementById('showAnswerBtn').classList.remove('highlight');
+  document.getElementById('backToBoardBtn').classList.remove('highlight');
   socket.emit('admin:closeQuestion');
   document.getElementById('questionOverlay').classList.remove('active');
 }
@@ -631,6 +655,8 @@ function renderBuzzOrder(order) {
 
 function awardPoints(playerId, correct) {
   socket.emit('admin:awardPoints', { playerId, correct });
+  // Highlight Show Answer as the next step
+  document.getElementById('showAnswerBtn').classList.add('highlight');
 }
 
 function adjustScore(playerId, amount) {
